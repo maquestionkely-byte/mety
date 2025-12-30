@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 type Message = {
   from: 'user' | 'worker';
@@ -7,98 +7,159 @@ type Message = {
 
 export default function Miresaka() {
   const [name, setName] = useState('');
+  const [started, setStarted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [started, setStarted] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function startChat() {
-    if (!name) return;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
+  // Démarrer le chat
+  const startChat = () => {
+    if (!name.trim()) return;
     setStarted(true);
-
-    // message automatique du worker
     setMessages([
       {
         from: 'worker',
-        text: "Félicitations d'avoir écrit avec nous, débutons la discussion.",
+        text: "Bienvenue ! Débutons la discussion.",
       },
     ]);
-  }
+  };
 
-  async function sendMessage() {
-    if (!input) return;
+  // Envoyer un message
+  const sendMessage = async () => {
+    if (!input.trim()) return;
 
-    const userMessage = { from: 'user' as const, text: input };
+    const userMessage: Message = { from: 'user', text: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
 
-    // ENVOI AU WORKER (on fera le vrai worker après)
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, message: input }),
-    });
-
-    const data = await res.json();
-
-    setMessages((prev) => [...prev, { from: 'worker', text: data.reply }]);
-  }
+    try {
+      const res = await fetch('https://app.tsaraasa51.workers.dev/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userName: name, message: input }),
+      });
+      const data = await res.json();
+      setMessages((prev) => [
+        ...prev,
+        { from: 'worker', text: data.reply || 'Pas de réponse du Worker.' },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { from: 'worker', text: 'Erreur de communication avec le Worker.' },
+      ]);
+    }
+  };
 
   if (!started) {
     return (
-      <div style={{ padding: 20, textAlign: 'center' }}>
-        <h2>Ajoutez votre nom</h2>
-        <p>Ampidiro ny anaranao</p>
-
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#e5ddd5',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+          textAlign: 'center',
+        }}
+      >
+        <h2>Miresaka</h2>
+        <p>Entrez votre nom :</p>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{ padding: 10, width: '80%' }}
+          placeholder="Votre nom..."
+          style={{ padding: 10, width: '80%', marginBottom: 10 }}
         />
         <br />
-        <br />
-        <button onClick={startChat}>Commencer</button>
+        <button
+          onClick={startChat}
+          style={{
+            padding: '10px 20px',
+            background: '#0b3d2e',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Commencer
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ paddingBottom: 70 }}>
-      {/* Messages */}
-      {messages.map((m, i) => (
-        <div
-          key={i}
-          style={{
-            textAlign: m.from === 'user' ? 'right' : 'left',
-            padding: '8px 16px',
-          }}
-        >
-          <span
-            style={{
-              display: 'inline-block',
-              background: m.from === 'user' ? '#4f8cff' : '#eee',
-              color: m.from === 'user' ? 'white' : 'black',
-              padding: '10px',
-              borderRadius: '12px',
-              maxWidth: '80%',
-            }}
-          >
-            {m.text}
-          </span>
-        </div>
-      ))}
-
-      {/* Barre écriture FIXE */}
+    <div
+      style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#e5ddd5',
+      }}
+    >
+      {/* Header type WhatsApp */}
       <div
         style={{
-          position: 'fixed',
-          bottom: 'env(safe-area-inset-bottom)',
-          left: 0,
-          right: 0,
+          padding: 15,
+          background: '#0b3d2e',
+          color: 'white',
+          fontWeight: 'bold',
+          textAlign: 'center',
+        }}
+      >
+        Miresaka - {name}
+      </div>
+
+      {/* Messages */}
+      <div
+        style={{
+          flex: 1,
+          padding: 10,
+          overflowY: 'auto',
+        }}
+      >
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            style={{
+              display: 'flex',
+              justifyContent: msg.from === 'user' ? 'flex-end' : 'flex-start',
+              marginBottom: 8,
+            }}
+          >
+            <div
+              style={{
+                background: msg.from === 'user' ? '#0b3d2e' : '#ffffff',
+                color: msg.from === 'user' ? '#ffffff' : '#000000',
+                fontWeight: msg.from === 'user' ? 'bold' : 'normal',
+                padding: 10,
+                borderRadius: 12,
+                maxWidth: '70%',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                whiteSpace: 'pre-line',
+              }}
+            >
+              {msg.text}
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Barre d’écriture type WhatsApp */}
+      <div
+        style={{
           display: 'flex',
           padding: 10,
-          background: '#fff',
+          background: '#f0f0f0',
           borderTop: '1px solid #ccc',
         }}
       >
@@ -106,10 +167,31 @@ export default function Miresaka() {
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          style={{ flex: 1, padding: 10 }}
           placeholder="Écrire un message..."
+          style={{
+            flex: 1,
+            padding: 10,
+            borderRadius: 20,
+            border: '1px solid #ccc',
+            outline: 'none',
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
         />
-        <button onClick={sendMessage}>Envoyer</button>
+        <button
+          onClick={sendMessage}
+          style={{
+            marginLeft: 10,
+            padding: '10px 15px',
+            borderRadius: '50%',
+            border: 'none',
+            background: '#0b3d2e',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          ➤
+        </button>
       </div>
     </div>
   );
