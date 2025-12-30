@@ -1,0 +1,28 @@
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Fond global */
+body {
+  background: #0b1c2d; /* bleu nuit */
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Liens / boutons */
+button {
+  background: #ffffff;
+  color: #0b1c2d;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  opacity: 0.9;
+}
